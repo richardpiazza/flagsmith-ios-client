@@ -9,21 +9,22 @@ import Foundation
 
 class FlagsmithAnalytics {
     
-    let EVENTS_KEY = "events"
     unowned let apiManager: APIManager
-    var events:[String:Int] = [:]
-    var timer:Timer?
     var enableAnalytics: Bool = true
+    var flushPeriod: Int = 10 {
+        didSet {
+            setupTimer()
+        }
+    }
+    
+    private let EVENTS_KEY = "events"
+    private var events:[String:Int] = [:]
+    private var timer:Timer?
     
     init(apiManager: APIManager) {
         self.apiManager = apiManager
         events = UserDefaults.standard.dictionary(forKey: EVENTS_KEY) as? [String:Int] ?? [:]
         setupTimer()
-    }
-    
-    func setupTimer() {
-        timer?.invalidate()
-        timer = Timer.scheduledTimer(timeInterval: TimeInterval(Flagsmith.shared.analyticsFlushPeriod), target: self, selector: #selector(postAnalytics(_:)), userInfo: nil, repeats: true)
     }
     
     func trackEvent(flagName:String) {
@@ -32,17 +33,22 @@ class FlagsmithAnalytics {
         saveEvents()
     }
     
-    func reset() {
+    private func setupTimer() {
+        timer?.invalidate()
+        timer = Timer.scheduledTimer(timeInterval: TimeInterval(Flagsmith.shared.analyticsFlushPeriod), target: self, selector: #selector(postAnalytics(_:)), userInfo: nil, repeats: true)
+    }
+    
+    private func reset() {
         events = [:]
         saveEvents()
     }
     
-    func saveEvents() {
+    private func saveEvents() {
         UserDefaults.standard.set(events, forKey: EVENTS_KEY)
     }
     
     /// Send analytics to the api when enabled.
-    @objc func postAnalytics(_ timer: Timer) {
+    @objc private func postAnalytics(_ timer: Timer) {
         guard enableAnalytics else {
             return
         }

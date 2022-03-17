@@ -32,10 +32,9 @@ public class Flagsmith {
   }
 
   /// How often to send the flag analytics, in seconds
-  public var analyticsFlushPeriod: Int = 10 {
-    didSet {
-      analytics.setupTimer()
-    }
+  public var analyticsFlushPeriod: Int {
+    set { analytics.flushPeriod = newValue }
+    get { analytics.flushPeriod }
   }
 
   private init() {}
