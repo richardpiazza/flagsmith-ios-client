@@ -9,14 +9,14 @@ import Foundation
 
 class FlagsmithAnalytics {
     
-    static let shared = FlagsmithAnalytics()
-    
     let EVENTS_KEY = "events"
+    unowned let apiManager: APIManager
     var events:[String:Int] = [:]
-    
     var timer:Timer?
+    var enableAnalytics: Bool = true
     
-    init() {
+    init(apiManager: APIManager) {
+        self.apiManager = apiManager
         events = UserDefaults.standard.dictionary(forKey: EVENTS_KEY) as? [String:Int] ?? [:]
         setupTimer()
     }
@@ -41,18 +41,22 @@ class FlagsmithAnalytics {
         UserDefaults.standard.set(events, forKey: EVENTS_KEY)
     }
     
+    /// Send analytics to the api when enabled.
     @objc func postAnalytics(_ timer: Timer) {
-        if Flagsmith.shared.enableAnalytics {
-            if !events.isEmpty {
-                Flagsmith.shared.postAnalytics() {
-                    (result) in
-                    switch result {
-                    case .success( _):
-                        self.reset()
-                    case .failure( _):
-                      print("Upload analytics failed")
-                    }
-                }
+        guard enableAnalytics else {
+            return
+        }
+        
+        guard !events.isEmpty else {
+            return
+        }
+        
+        apiManager.request(.postAnalytics(events: events), emptyResponse: true) { [weak self] (result: Result<String, Error>) in
+            switch result {
+            case .failure:
+                print("Upload analytics failed")
+            case .success:
+                self?.reset()
             }
         }
     }
